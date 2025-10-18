@@ -9,37 +9,16 @@ on:
 
 concurrency: nope
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  zizmor:
-    runs-on: ubuntu-24.04
-
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Run zizmor
-        run: pipx run zizmor .
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-installer:
     runs-on: windows-${{ matrix.image }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - msystem: CLANGARM64
-            arch_name: arm64
-            image: 11-arm
-          - msystem: CLANG64
+          - msystem: UCRT64
             arch_name: x86_64
             image: 2022
     steps:
@@ -49,15 +28,10 @@ jobs:
           persist-credentials: false
 
       - name: setup-msys2
-        uses: msys2/setup-msys2@v2  # zizmor: ignore[unpinned-uses]
+        uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.msystem }}
           update: true
-          install: >-
-            tar
-          pacboy: >-
-            qt-installer-framework:p
-            7zip:p
 
       - name: Switch to the main mirror
         shell: msys2 {0}
@@ -79,166 +53,20 @@ jobs:
 
       - name: Create 'latest' Variants and Checksums
         run: |
-          mv msys2-${{ matrix.arch_name }}-[0-9]*.exe msys2-${{ matrix.arch_name }}-latest.exe
-          if ("${{ matrix.arch_name }}" -ne "arm64") {
-            mv msys2-base-${{ matrix.arch_name }}-[0-9]*.sfx.exe msys2-base-${{ matrix.arch_name }}-latest.sfx.exe
-            mv msys2-*.tar.xz msys2-base-${{ matrix.arch_name }}-latest.tar.xz
-            mv msys2-*.tar.zst msys2-base-${{ matrix.arch_name }}-latest.tar.zst
-          }
-          mv msys2-*.packages.txt msys2-base-${{ matrix.arch_name }}-latest.packages.txt
-          sha256sum.exe msys2-*
-          sha256sum.exe msys2-* > msys2-${{ matrix.arch_name }}-checksums.txt
+          mv msys2-base-${{ matrix.arch_name }}-[0-9]*.sfx.exe Yunzai-latest.sfx.exe
+          mv msys2-*.tar.zst Yunzai-latest.tar.zst
+          sha256sum.exe Yunzai-* > checksums.txt
+          cat checksums.txt
+          mv checksums.txt Yunzai-checksums.txt
 
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.arch_name }}
-          path: msys2-*
+          path: Yunzai-*
 
-  test-installer:
-    name: installer-${{ matrix.image }}
-    runs-on: windows-${{ matrix.image }}
-    needs: build-installer
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch_name: arm64
-            image: 11-arm
-          - arch_name: x86_64
-            image: 2022
-          - arch_name: x86_64
-            image: 2025
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: installer-${{ matrix.arch_name }}
-
-      - name: Install
-        run: |
-          ./msys2-${{ matrix.arch_name }}-latest.exe in --confirm-command --accept-messages --root C:/msys2-install-test
-
-      - name: Test without Login Shell
-        run: |
-          C:\msys2-install-test\usr\bin\pacman.exe -Syy
-          C:\msys2-install-test\usr\bin\pacman.exe --noconfirm -S vim
-
-      - name: Test
-        run: |
-          C:\msys2-install-test\usr\bin\bash.exe -lc "pacman --version"
-          C:\msys2-install-test\usr\bin\bash.exe -lc "pacman -Qkv"
-          C:\msys2-install-test\usr\bin\bash.exe -lc "pacman -Syy"
-          C:\msys2-install-test\usr\bin\bash.exe -lc "pacman --noconfirm -S git"
-
-      - name: Uninstall
-        run: |
-          C:\msys2-install-test\uninstall.exe pr --confirm-command
-
-  test-docker-sfx:
-    name: docker-sfx-${{ matrix.image }}
-    runs-on: windows-${{ matrix.image }}
-    needs: build-installer
-    strategy:
-      fail-fast: false
-      matrix:
-        image: [2022, 2025]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: installer-x86_64
-
-      - name: Build image
-        run: |
-          docker build -t msys2-base -f ./.ci/Dockerfile.${{ matrix.image }} .
-
-      - name: Test without Login Shell
-        run: |
-          docker run msys2-base C:\msys64\usr\bin\pacman.exe -Syy
-          docker run msys2-base C:\msys64\usr\bin\pacman.exe --noconfirm -S vim
-
-      - name: Test
-        run: |
-          docker run msys2-base C:\msys64\usr\bin\bash.exe -lc "pacman --version"
-          docker run msys2-base C:\msys64\usr\bin\bash.exe -lc "pacman -Qkv"
-          docker run msys2-base C:\msys64\usr\bin\bash.exe -lc "pacman -Qkk || true"
-          docker run msys2-base C:\msys64\usr\bin\bash.exe -lc "pacman -Syy"
-          docker run msys2-base C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm git"
-
-  test-sfx:
-    name: sfx-${{ matrix.image }}
-    runs-on: windows-${{ matrix.image }}
-    needs: build-installer
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch_name: x86_64
-            image: 11-arm
-          - arch_name: x86_64
-            image: 2022
-          - arch_name: x86_64
-            image: 2025
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: installer-${{ matrix.arch_name }}
-
-      - name: Install
-        run: |
-          ./msys2-base-${{ matrix.arch_name }}-latest.sfx.exe  -y -oC:/msys2-install-test
-
-      - name: Test without Login Shell
-        run: |
-          $env:Path = 'C:\msys2-install-test\msys64\usr\bin;' + $env:Path
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -c "pacman-key --init"
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -c "pacman-key --populate"
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -c "pacman -Syy"
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -c "pacman --noconfirm -S vim"
-
-      - name: Test
-        run: |
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -lc "pacman --version"
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -lc "pacman -Qkv"
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -lc "pacman -Qkk || true"
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -lc "pacman -Syy"
-          C:\msys2-install-test\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm git"
-
-  upload-nightly:
-    permissions:
-      contents: write
-    needs:
-      - zizmor
-      - test-docker-sfx
-      - test-installer
-      - test-sfx
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: installer-x86_64
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: installer-arm64
-
-      - name: Upload Installers
+      - name: Upload Nightly
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload nightly-x86_64 msys2-* --clobber -R ${{ github.repository }}
+          gh release upload nightly Yunzai-* --clobber -R ${{ github.repository }}

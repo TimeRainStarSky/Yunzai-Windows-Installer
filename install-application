@@ -1,0 +1,61 @@
+echo "[Creating application...]"
+pacman -S git mingw-w64-ucrt-x86_64-fastfetch --noconfirm --root "${_newmsys}"
+
+mktmp(){
+  TMP="${_thisdir}/tmp"
+  rm -rf "$TMP"
+  mkdir -p "$TMP"
+}
+geturl(){ curl -L --retry 2 --connect-timeout 5 "$@";}
+git_clone() {
+  rm -rf "$2"
+  git clone --depth 1 --single-branch "$@"
+  rm -rf "$2/.git"
+}
+mkpath() {
+  if ! grep -q "$*:" win/PATH;then
+    PATH="${_newmsys}$*:$PATH";echo -n "$*:">>win/PATH
+  fi
+}
+mkdir win
+
+mktmp
+GETVER="$(geturl "https://nodejs.org/dist/index.tab"|sed -n 2p|cut -f1)"
+geturl "https://nodejs.org/dist/$GETVER/node-$GETVER-win-x64.zip">"$TMP/node.zip"
+unzip -qo "$TMP/node.zip" -d "$TMP"
+mv -vf "$TMP/"*/ win/node
+mkpath /win/node
+npm i --prefix win/node -g pnpm
+
+git_clone "https://github.com/zkteco-home/redis-windows" win/redis
+mkpath /win/redis
+
+mktmp
+geturl "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip">"$TMP/ffmpeg.zip"
+unzip -qo "$TMP/ffmpeg.zip" -d "$TMP"
+mv -vf "$TMP/"*/ win/ffmpeg
+mkpath /win/ffmpeg/bin
+
+cat > start.cmd << 'EOF'
+@echo off
+cd /d %~dp0
+for /f "delims=" %%i in ('msys2_shell.cmd -defterm -here -no-start -ucrt64 -c 'cygpath -wp "$(</win/PATH)$PATH"'') do (set PATH=%%i)
+fastfetch
+cd app
+node .
+EOF
+
+cat > uninstall.cmd << 'EOF'
+@echo off
+rd /s %~dp0
+EOF
+
+cat > etc/post-install/99-application.post << 'EOF'
+PATH="$(</win/PATH)$PATH"
+if [ ! -d /app ]; then
+  git clone --depth 1 --single-branch https://gitee.com/TimeRainStarSky/Yunzai /app
+  pushd /app
+    pnpm install
+  popd
+fi
+EOF
