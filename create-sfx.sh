@@ -39,7 +39,7 @@ mv -f Yunzai.tar.zst "$INPUT"
 cat "$BASE/bin/7zSD.sfx" - "$TEMP" > "$OUTPUT" << 'EOF'
 ;!@Install@!UTF-8!
 ExecuteFile="powershell.exe"
-ExecuteParameters="./install.ps1"
+ExecuteParameters="-ExecutionPolicy Bypass .\install.ps1"
 ;!@InstallEnd@!
 EOF
 rm -rf 7z.exe Yunzai.7z "$TEMP" "$BASE"

@@ -2,4 +2,4 @@
 
 ## Nightly build
 
-https://github.com/msys2/msys2-installer/releases/tag/nightly
+https://github.com/TimeRainStarSky/Yunzai-Windows-Installer/releases/tag/nightly
