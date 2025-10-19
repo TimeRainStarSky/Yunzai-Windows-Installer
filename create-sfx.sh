@@ -1,5 +1,5 @@
 #!/bin/bash
-# usage: ./create-sfx.sh /some/path/to/msys64 installer.exe
+# usage: ./create-sfx.sh msys64.tar.zst installer.exe
 set -e
 
 INPUT="$(realpath "$1")"
@@ -19,13 +19,6 @@ echo "$CHECKSUM $BASE.exe" | sha256sum --quiet --check
 mv -f "$BASE"/7z.{exe,dll} .
 rm -rf "$BASE"
 
-# Create 7-zip
-DIR="$(pwd)"
-cd "$INPUT"
-"$DIR/7z.exe" a "$DIR/Yunzai.7z" -ms1T -m0=zstd -mx22 *
-cd "$DIR"
-./7z.exe t Yunzai.7z
-
 CHECKSUM="cbc3babd589d971e45971d787ff100be8aaa5eab15b2694497ec3e447009e1f2"
 NAME="lzma2501"
 BASE="_cache/$NAME"
@@ -39,7 +32,9 @@ echo "$CHECKSUM $BASE.7z" | sha256sum --quiet --check
 TEMP="$OUTPUT.payload"
 rm -rf "$TEMP"
 "$BASE/bin/7zr.exe" a "$TEMP" -ms1T -mx9 install.ps1 7z.{exe,dll}
-"$BASE/bin/7zr.exe" a "$TEMP" -mx0 Yunzai.7z
+mv -f "$INPUT" Yunzai.tar.zst
+"$BASE/bin/7zr.exe" a "$TEMP" -mx0 Yunzai.tar.zst
+mv -f Yunzai.tar.zst "$INPUT"
 "$BASE/bin/7zr.exe" t "$TEMP"
 cat "$BASE/bin/7zSD.sfx" - "$TEMP" > "$OUTPUT" << 'EOF'
 ;!@Install@!UTF-8!

@@ -66,6 +66,7 @@ jobs:
           path: Yunzai-*
 
       - name: Upload Nightly
+        if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

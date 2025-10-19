@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 set -e
 
 _thisdir="$( cd "$( dirname "$0" )" && pwd )"
@@ -11,12 +10,26 @@ _version="${_date}"
 _newmsysbase="${_build}/newmsys"
 _newmsys="${_newmsysbase}/msys64"
 _arch_name="x86_64"
+_tarfile="${_thisdir}/msys2-base-${_arch_name}-${_date}.tar"
+
+create_archives() {
+  echo "[Creating tarball...]"
+  pushd "${_newmsys}" > /dev/null
+    /usr/bin/tar --transform='s/:/_/g' --dereference --hard-dereference -cf "${_tarfile}" *
+  popd > /dev/null
+
+  echo "[Creating zstd archive...]"
+  zstd -T0 -22 --ultra --force "${_tarfile}" -o "${_tarfile}.zst"
+  zstd --test "${_tarfile}.zst"
+
+  rm "${_tarfile}"
+}
 
 create_sfx() {
   echo "[Creating SFX...]"
 
   pushd "${_newmsysbase}" > /dev/null
-    "${_thisdir}/create-sfx.sh" "msys64" "${_thisdir}/msys2-base-${_arch_name}-${_date}.sfx.exe"
+    "${_thisdir}/create-sfx.sh" "${_tarfile}.zst" "${_thisdir}/msys2-base-${_arch_name}-${_date}.sfx.exe"
   popd > /dev/null
 }
 
@@ -44,6 +57,7 @@ main() {
     "${MINGW_PACKAGE_PREFIX}-7zip" \
 
   create_chroot_system
+  create_archives
   create_sfx
 }
 

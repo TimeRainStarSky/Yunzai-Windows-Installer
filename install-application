@@ -1,5 +1,4 @@
 echo "[Creating application...]"
-pacman -S git mingw-w64-ucrt-x86_64-fastfetch --noconfirm --root "${_newmsys}"
 
 mktmp(){
   TMP="${_thisdir}/tmp"
@@ -13,8 +12,9 @@ git_clone() {
   rm -rf "$2/.git"
 }
 mkpath() {
-  if ! grep -q "$*:" win/PATH;then
-    PATH="${_newmsys}$*:$PATH";echo -n "$*:">>win/PATH
+  if ! grep -q "$*:" win/PATH &> /dev/null; then
+    PATH="${_newmsys}$*:$PATH"
+    echo -n "$*:">>win/PATH
   fi
 }
 mkdir win
@@ -38,24 +38,24 @@ mkpath /win/ffmpeg/bin
 
 cat > start.cmd << 'EOF'
 @echo off
-cd /d %~dp0
-for /f "delims=" %%i in ('msys2_shell.cmd -defterm -here -no-start -ucrt64 -c 'cygpath -wp "$(</win/PATH)$PATH"'') do (set PATH=%%i)
+cd /d "%~dp0"
+for /f "delims=" %%i in ('msys2_shell.cmd -defterm -here -no-start -ucrt64 -c 'cygpath -wp "$PATH"'') do (set PATH=%%i)
 fastfetch
 cd app
 node .
 EOF
 
-cat > uninstall.cmd << 'EOF'
-@echo off
-rd /s %~dp0
+cat > etc/post-install/10-application.post << 'EOF'
+PATH="$(</win/PATH)$PATH"
 EOF
 
-cat > etc/post-install/99-application.post << 'EOF'
-PATH="$(</win/PATH)$PATH"
+cat > etc/post-install/99.post << 'EOF'
+pacman -Syu --needed --noconfirm git mingw-w64-ucrt-x86_64-fastfetch
 if [ ! -d /app ]; then
   git clone --depth 1 --single-branch https://gitee.com/TimeRainStarSky/Yunzai /app
   pushd /app
     pnpm install
   popd
 fi
+rm -f /etc/post-install/99.post
 EOF

@@ -68,11 +68,11 @@ $InstallButton.Size = New-Object System.Drawing.Size(80, 30)
 # 绑定点击事件（核心逻辑）
 $InstallButton.Add_Click({
   $DestinationPath = $TextBox.Text
-  $SourcePath = Join-Path (Get-Location) ($SourceFolderName + ".7z")
+  $SourcePath = Join-Path (Get-Location) ($SourceFolderName + ".tar")
 
   # 检查目标文件夹是否已存在，如果存在则询问是否覆盖
   if (Test-Path $DestinationPath) {
-    $MsgResult = [System.Windows.Forms.MessageBox]::Show("安装目标文件夹已存在，是否覆盖？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+    $MsgResult = [System.Windows.Forms.MessageBox]::Show("目标文件夹已存在，是否覆盖？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
     if ($MsgResult -eq [System.Windows.Forms.DialogResult]::No) {
       return # 用户选择不覆盖，取消操作
     }
@@ -126,13 +126,21 @@ $InstallButton.Add_Click({
     $StatusLabel.Text = "正在解压文件..."
     $ProgressBar.Value = 10
     $ProgressForm.Refresh()
-    & (Join-Path (Get-Location) "7z.exe") x ("-o" + $DestinationPath) $SourcePath | Write-Host
+    & (Join-Path (Get-Location) "7z.exe") x ("-o" + (Get-Location)) ($SourcePath + ".zst") | Write-Host
     if ($LASTEXITCODE -ne 0) {
       throw "解压错误 ($LASTEXITCODE) 请检查控制台"
     }
 
+    $StatusLabel.Text = "正在释放文件..."
+    $ProgressBar.Value = 37
+    $ProgressForm.Refresh()
+    & (Join-Path (Get-Location) "7z.exe") x ("-o" + $DestinationPath) $SourcePath | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+      throw "释放错误 ($LASTEXITCODE) 请检查控制台"
+    }
+
     $StatusLabel.Text = "正在安装程序..."
-    $ProgressBar.Value = 60
+    $ProgressBar.Value = 64
     $ProgressForm.Refresh()
     & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c '""' | Write-Host
     if ($LASTEXITCODE -ne 0) {
@@ -146,24 +154,28 @@ $InstallButton.Add_Click({
     $StartMenu = Join-Path (Join-Path ([System.Environment]::GetFolderPath("StartMenu")) "Programs") $DestinationName
     $Desktop = [System.Environment]::GetFolderPath("Desktop")
     New-Item -Path $StartMenu -ItemType Directory -Force
+    $UninstallCommand = "/c rd /s ""$DestinationPath""||exit&rd /s /q ""$StartMenu"""
 
-    $File = Join-Path $StartMenu ($DestinationName + ".lnk")
+    $File = Join-Path $Desktop ($DestinationName + ".lnk")
     $ShortCut = (New-Object -ComObject WScript.Shell).CreateShortcut($File)
     $ShortCut.TargetPath = Join-Path $DestinationPath "start.cmd"
     $ShortCut.Save()
-    Copy-Item -Path $File -Destination $Desktop
+    $UninstallCommand += "&del /f /s /q ""$File"""
+    Copy-Item -Path $File -Destination $StartMenu
 
-    $File = Join-Path $StartMenu ($DestinationName + " 命令行.lnk")
+    $File = Join-Path $Desktop ($DestinationName + " 命令行.lnk")
     $ShortCut = (New-Object -ComObject WScript.Shell).CreateShortcut($File)
     $ShortCut.TargetPath = Join-Path $DestinationPath "msys2_shell.cmd"
     $ShortCut.Arguments = "-defterm -here -no-start -ucrt64"
     $ShortCut.WorkingDirectory = Join-Path $DestinationPath "app"
     $ShortCut.Save()
-    Copy-Item -Path $File -Destination $Desktop
+    $UninstallCommand += " ""$File"""
+    Copy-Item -Path $File -Destination $StartMenu
 
-    $File = Join-Path $StartMenu ($DestinationName + " 卸载.lnk")
+    $File = Join-Path $StartMenu ("卸载 " + $DestinationName + ".lnk")
     $ShortCut = (New-Object -ComObject WScript.Shell).CreateShortcut($File)
-    $ShortCut.TargetPath = Join-Path $DestinationPath "uninstall.cmd"
+    $ShortCut.TargetPath = "cmd.exe"
+    $ShortCut.Arguments = $UninstallCommand
     $ShortCut.Save()
 
     $ProgressForm.Text = "安装成功"
