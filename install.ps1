@@ -10,6 +10,82 @@ $SourceFolderName = "Yunzai"
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# 源选择窗口
+function Show-SourceSelectionDialog {
+  $SourceForm = New-Object System.Windows.Forms.Form
+  $SourceForm.Text = "安装项目 - 请选择安装源"
+  $SourceForm.Size = New-Object System.Drawing.Size(350, 250)
+  $SourceForm.StartPosition = "CenterScreen"
+  $SourceForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+  $SourceForm.MaximizeBox = $false
+  $SourceForm.MinimizeBox = $false
+  $SourceForm.ControlBox = $true
+  # 使用 Tag 属性在事件处理程序和函数返回之间传递选定的 URL
+  $SourceForm.Tag = $null
+
+  $GroupBox = New-Object System.Windows.Forms.GroupBox
+  $GroupBox.Text = "请选择 Git 仓库源"
+  $GroupBox.Location = New-Object System.Drawing.Point(20, 10)
+  $GroupBox.Size = New-Object System.Drawing.Size(300, 150)
+  $SourceForm.Controls.Add($GroupBox)
+
+  $Sources = [ordered]@{
+    "GitHub（国外推荐）" = "github.com";
+    "Gitee（国内推荐）" = "gitee.com";
+    "GitCode" = "gitcode.com"
+  }
+  $RadioButtons = @()
+  $Y = 30
+
+  foreach ($Name in $Sources.Keys) {
+    $RadioButton = New-Object System.Windows.Forms.RadioButton
+    $RadioButton.Text = $Name
+    $RadioButton.Tag = $Sources[$Name] # Store URL in Tag
+    $RadioButton.Location = New-Object System.Drawing.Point(10, $Y)
+    $RadioButton.AutoSize = $true
+    $GroupBox.Controls.Add($RadioButton)
+    $RadioButtons += $RadioButton
+    $Y += 30
+  }
+
+  # 默认选择 Gitee
+  $RadioButtons[1].Checked = $true
+
+  # 确认按钮
+  $OkButton = New-Object System.Windows.Forms.Button
+  $OkButton.Text = "确认"
+  $OkButton.Location = New-Object System.Drawing.Point(165, 170)
+  $OkButton.Size = New-Object System.Drawing.Size(75, 30)
+  $OkButton.Add_Click({
+    foreach ($RB in $RadioButtons) {
+      if ($RB.Checked) {
+        $SourceForm.Tag = $RB.Tag
+        break
+      }
+    }
+    $SourceForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
+  })
+  $SourceForm.Controls.Add($OkButton)
+
+  # 取消按钮
+  $CancelButton = New-Object System.Windows.Forms.Button
+  $CancelButton.Text = "取消"
+  $CancelButton.Location = New-Object System.Drawing.Point(245, 170)
+  $CancelButton.Size = New-Object System.Drawing.Size(75, 30)
+  $CancelButton.Add_Click({
+    $SourceForm.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+  })
+  $SourceForm.Controls.Add($CancelButton)
+
+  $Result = $SourceForm.ShowDialog()
+
+  if ($Result -eq [System.Windows.Forms.DialogResult]::OK) {
+    return $SourceForm.Tag
+  } else {
+    return $null
+  }
+}
+
 # --------------------------------------------------------
 # 3. 创建主窗体 (Form)
 # --------------------------------------------------------
@@ -112,8 +188,8 @@ $InstallButton.Add_Click({
   try {
     if (Test-Path $DestinationPath) {
       if (Test-Path (Join-Path $DestinationPath "app") -Type Container) {
-        $MsgResult = [System.Windows.Forms.MessageBox]::Show("是否保留数据？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
-        if ($MsgResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+        $KeepDataResult = [System.Windows.Forms.MessageBox]::Show("是否保留数据？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        if ($KeepDataResult -eq [System.Windows.Forms.DialogResult]::Yes) {
           Get-ChildItem -Path $DestinationPath -Exclude "app" | Remove-Item -Recurse -Force
         } else {
           Remove-Item -Path $DestinationPath -Recurse -Force
@@ -132,7 +208,7 @@ $InstallButton.Add_Click({
     }
 
     $StatusLabel.Text = "正在释放文件..."
-    $ProgressBar.Value = 37
+    $ProgressBar.Value = 30
     $ProgressForm.Refresh()
     & (Join-Path (Get-Location) "7z.exe") x ("-o" + $DestinationPath) $SourcePath | Write-Host
     if ($LASTEXITCODE -ne 0) {
@@ -140,9 +216,22 @@ $InstallButton.Add_Click({
     }
 
     $StatusLabel.Text = "正在安装程序..."
-    $ProgressBar.Value = 64
+    $ProgressBar.Value = 50
     $ProgressForm.Refresh()
-    & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c '""' | Write-Host
+    $Msys2Command = '""'
+    & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c $Msys2Command | Write-Host
+
+    $StatusLabel.Text = "正在安装项目..."
+    $ProgressBar.Value = 70
+    $ProgressForm.Refresh()
+    if ($KeepDataResult -ne [System.Windows.Forms.DialogResult]::Yes) {
+      $SelectedURL = Show-SourceSelectionDialog
+      if (-not $SelectedURL) {
+        throw "安装已取消"
+      }
+      $Msys2Command = """git clone --depth 1 --single-branch https://$SelectedURL/TimeRainStarSky/Yunzai /app && cd /app && pnpm i"""
+    }
+    & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c $Msys2Command | Write-Host
     if ($LASTEXITCODE -ne 0) {
       throw "安装错误 ($LASTEXITCODE) 请检查控制台"
     }
@@ -190,7 +279,7 @@ $InstallButton.Add_Click({
     if (Test-Path $DestinationPath) {
       $StatusLabel.Text = "正在清理文件..."
       $ProgressForm.Refresh()
-      if ((Test-Path (Join-Path $DestinationPath "app") -Type Container) -and ($MsgResult -eq [System.Windows.Forms.DialogResult]::Yes)) {
+      if ($KeepDataResult -eq [System.Windows.Forms.DialogResult]::Yes) {
         Get-ChildItem -Path $DestinationPath -Exclude "app" | Remove-Item -Recurse -Force -ErrorAction Continue
       } else {
         Remove-Item -Path $DestinationPath -Recurse -Force -ErrorAction Continue
@@ -220,4 +309,5 @@ $Form.Controls.Add($InstallButton)
 # --------------------------------------------------------
 # 5. 显示窗体
 # --------------------------------------------------------
+Write-Host "请查看弹出的安装程序窗口。"
 $Form.ShowDialog() | Out-Null

@@ -51,11 +51,5 @@ EOF
 
 cat > etc/post-install/99.post << 'EOF'
 pacman -Syu --needed --noconfirm git mingw-w64-ucrt-x86_64-fastfetch
-if [ ! -d /app ]; then
-  git clone --depth 1 --single-branch https://gitee.com/TimeRainStarSky/Yunzai /app
-  pushd /app
-    pnpm install
-  popd
-fi
 rm -f /etc/post-install/99.post
 EOF
