@@ -39,7 +39,7 @@ mkpath /win/ffmpeg/bin
 cat > start.cmd << 'EOF'
 @echo off
 cd /d "%~dp0"
-for /f "delims=" %%i in ('msys2_shell.cmd -defterm -here -no-start -ucrt64 -c 'cygpath -wp "$PATH"'') do (set PATH=%%i)
+for /f "delims=" %%i in ('msys2_shell.cmd -defterm -here -no-start -ucrt64 -c 'cmd //c echo ^^%%PATH^^%%'') do (set PATH=%%i)
 fastfetch
 cd app
 node .

@@ -90,7 +90,7 @@ function Show-SourceSelectionDialog {
 # 3. 创建主窗体 (Form)
 # --------------------------------------------------------
 $Form = New-Object System.Windows.Forms.Form
-$Form.Text = "Yunzai 安装程序"
+$Form.Text = "$SourceFolderName 安装程序"
 $Form.Size = New-Object System.Drawing.Size(450, 160)
 $Form.StartPosition = "CenterScreen"
 $Form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
@@ -145,6 +145,13 @@ $InstallButton.Size = New-Object System.Drawing.Size(80, 30)
 $InstallButton.Add_Click({
   $DestinationPath = $TextBox.Text
   $SourcePath = Join-Path (Get-Location) ($SourceFolderName + ".tar")
+
+  if ($DestinationPath -match '[^\x00-\x7F]')  {
+    $MsgResult = [System.Windows.Forms.MessageBox]::Show("路径包含特殊字符，可能会导致问题，是否继续？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+    if ($MsgResult -eq [System.Windows.Forms.DialogResult]::No) {
+      return
+    }
+  }
 
   # 检查目标文件夹是否已存在，如果存在则询问是否覆盖
   if (Test-Path $DestinationPath) {
@@ -229,7 +236,7 @@ $InstallButton.Add_Click({
       if (-not $SelectedURL) {
         throw "安装已取消"
       }
-      $Msys2Command = """git clone --depth 1 --single-branch https://$SelectedURL/TimeRainStarSky/Yunzai /app && cd /app && pnpm i"""
+      $Msys2Command = """git clone --depth 1 https://$SelectedURL/TimeRainStarSky/Yunzai /app && cd /app && pnpm i"""
     }
     & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c $Msys2Command | Write-Host
     if ($LASTEXITCODE -ne 0) {
