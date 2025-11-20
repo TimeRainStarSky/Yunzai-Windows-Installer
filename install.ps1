@@ -153,11 +153,24 @@ $InstallButton.Add_Click({
     }
   }
 
-  # 检查目标文件夹是否已存在，如果存在则询问是否覆盖
+  # 检查目标文件夹是否已存在，如果存在则询问是否覆盖、保留数据
+  $KeepDataResult = $null
   if (Test-Path $DestinationPath) {
     $MsgResult = [System.Windows.Forms.MessageBox]::Show("目标文件夹已存在，是否覆盖？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
     if ($MsgResult -eq [System.Windows.Forms.DialogResult]::No) {
       return # 用户选择不覆盖，取消操作
+    }
+
+    if (Test-Path (Join-Path $DestinationPath "app") -Type Container) {
+      $KeepDataResult = [System.Windows.Forms.MessageBox]::Show("是否保留数据？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+    }
+  }
+
+  # 选择仓库源
+  if ($KeepDataResult -ne [System.Windows.Forms.DialogResult]::Yes) {
+    $SelectedURL = Show-SourceSelectionDialog
+    if (-not $SelectedURL) {
+      return
     }
   }
 
@@ -194,13 +207,8 @@ $InstallButton.Add_Click({
   # 执行安装
   try {
     if (Test-Path $DestinationPath) {
-      if (Test-Path (Join-Path $DestinationPath "app") -Type Container) {
-        $KeepDataResult = [System.Windows.Forms.MessageBox]::Show("是否保留数据？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
-        if ($KeepDataResult -eq [System.Windows.Forms.DialogResult]::Yes) {
-          Get-ChildItem -Path $DestinationPath -Exclude "app" | Remove-Item -Recurse -Force
-        } else {
-          Remove-Item -Path $DestinationPath -Recurse -Force
-        }
+      if ($KeepDataResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+        Get-ChildItem -Path $DestinationPath -Exclude "app" | Remove-Item -Recurse -Force
       } else {
         Remove-Item -Path $DestinationPath -Recurse -Force
       }
@@ -231,11 +239,7 @@ $InstallButton.Add_Click({
     $StatusLabel.Text = "正在安装项目..."
     $ProgressBar.Value = 70
     $ProgressForm.Refresh()
-    if ($KeepDataResult -ne [System.Windows.Forms.DialogResult]::Yes) {
-      $SelectedURL = Show-SourceSelectionDialog
-      if (-not $SelectedURL) {
-        throw "安装已取消"
-      }
+    if ($SelectedURL) {
       $Msys2Command = """git clone --depth 1 https://$SelectedURL/TimeRainStarSky/Yunzai /app && cd /app && pnpm i"""
     }
     & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c $Msys2Command | Write-Host
