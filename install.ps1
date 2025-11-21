@@ -266,7 +266,7 @@ $InstallButton.Add_Click({
     $File = Join-Path $Desktop ($DestinationName + " 命令行.lnk")
     $ShortCut = (New-Object -ComObject WScript.Shell).CreateShortcut($File)
     $ShortCut.TargetPath = Join-Path $DestinationPath "msys2_shell.cmd"
-    $ShortCut.Arguments = "-defterm -here -no-start -ucrt64"
+    $ShortCut.Arguments = "-defterm -here -no-start -ucrt64 -c fish"
     $ShortCut.WorkingDirectory = Join-Path $DestinationPath "app"
     $ShortCut.Save()
     $UninstallCommand += " ""$File"""

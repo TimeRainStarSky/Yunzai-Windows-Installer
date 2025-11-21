@@ -40,16 +40,17 @@ cat > start.cmd << 'EOF'
 @echo off
 cd /d "%~dp0"
 for /f "delims=" %%i in ('msys2_shell.cmd -defterm -here -no-start -ucrt64 -c 'cmd //c echo ^^%%PATH^^%%'') do (set PATH=%%i)
+for /f "delims=" %%i in ('locale -uU') do (set LANG=%%i)
 fastfetch
 cd app
 node .
 EOF
 
-cat > etc/post-install/10-application.post << 'EOF'
+cat > etc/profile.d/WinPATH.sh << 'EOF'
 PATH="$(</win/PATH)$PATH"
 EOF
 
 cat > etc/post-install/99.post << 'EOF'
-pacman -Syu --needed --noconfirm git mingw-w64-ucrt-x86_64-fastfetch
+pacman -Syu --needed --noconfirm git fish mingw-w64-ucrt-x86_64-fastfetch
 rm -f /etc/post-install/99.post
 EOF
