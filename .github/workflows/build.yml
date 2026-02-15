@@ -23,7 +23,7 @@ jobs:
             image: 2022
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -60,7 +60,7 @@ jobs:
           mv checksums.txt Yunzai-checksums.txt
 
       - name: Upload Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: installer-${{ matrix.arch_name }}
           path: Yunzai-*
