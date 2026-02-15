@@ -1,3 +1,4 @@
+_pkgname="Yunzai"
 echo "[Creating application...]"
 
 mktmp(){

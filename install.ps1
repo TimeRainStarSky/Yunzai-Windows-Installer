@@ -214,16 +214,8 @@ $InstallButton.Add_Click({
       }
     }
 
-    $StatusLabel.Text = "正在解压文件..."
-    $ProgressBar.Value = 10
-    $ProgressForm.Refresh()
-    & (Join-Path (Get-Location) "7z.exe") x ("-o" + (Get-Location)) ($SourcePath + ".zst") | Write-Host
-    if ($LASTEXITCODE -ne 0) {
-      throw "解压错误 ($LASTEXITCODE) 请检查控制台"
-    }
-
     $StatusLabel.Text = "正在释放文件..."
-    $ProgressBar.Value = 30
+    $ProgressBar.Value = 10
     $ProgressForm.Refresh()
     & (Join-Path (Get-Location) "7z.exe") x ("-o" + $DestinationPath) $SourcePath | Write-Host
     if ($LASTEXITCODE -ne 0) {
@@ -231,7 +223,7 @@ $InstallButton.Add_Click({
     }
 
     $StatusLabel.Text = "正在安装程序..."
-    $ProgressBar.Value = 50
+    $ProgressBar.Value = 40
     $ProgressForm.Refresh()
     $Msys2Command = '""'
     & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c $Msys2Command | Write-Host
