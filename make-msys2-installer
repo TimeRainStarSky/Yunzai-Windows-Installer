@@ -3,17 +3,15 @@ set -e
 
 _thisdir="$( cd "$( dirname "$0" )" && pwd )"
 _build="${_thisdir}/_build"
-_ifwroot="${_build}/qt-ifw"
 _date=$(date +'%Y%m%d')
-_dateqif=$(date +'%Y-%m-%d')
 _version="${_date}"
 _newmsysbase="${_build}/newmsys"
 _newmsys="${_newmsysbase}/msys64"
-_arch_name="x86_64"
-_tarfile="${_thisdir}/msys2-base-${_arch_name}-${_date}.tar"
 _pkgname="msys2"
 
 create_archives() {
+  _tarfile="${_thisdir}/${_pkgname}-${_date}.tar"
+
   echo "[Creating tarball...]"
   pushd "${_newmsys}" > /dev/null
     /usr/bin/tar --transform='s/:/_/g' --dereference --hard-dereference -cf "${_tarfile}" *
@@ -22,13 +20,15 @@ create_archives() {
   echo "[Creating zstd archive...]"
   zstd -T0 -22 --ultra --force "${_tarfile}" -o "${_tarfile}.zst"
   zstd --test "${_tarfile}.zst"
+
+  rm "${_tarfile}"
 }
 
 create_sfx() {
   echo "[Creating SFX...]"
 
   pushd "${_newmsysbase}" > /dev/null
-    "${_thisdir}/create-sfx.sh" "${_tarfile}" "${_pkgname}.tar" "${_thisdir}/msys2-base-${_arch_name}-${_date}.sfx.exe"
+    "${_thisdir}/create-sfx.sh" "${_newmsys}" "${_pkgname}.7z" "${_thisdir}/${_pkgname}-${_date}.sfx.exe"
   popd > /dev/null
 }
 

@@ -144,7 +144,7 @@ $InstallButton.Size = New-Object System.Drawing.Size(80, 30)
 # 绑定点击事件（核心逻辑）
 $InstallButton.Add_Click({
   $DestinationPath = $TextBox.Text
-  $SourcePath = Join-Path (Get-Location) ($SourceFolderName + ".tar")
+  $SourcePath = Join-Path (Get-Location) ($SourceFolderName + ".7z")
 
   if ($DestinationPath -match '[^\x00-\x7F]')  {
     $MsgResult = [System.Windows.Forms.MessageBox]::Show("路径包含特殊字符，可能会导致问题，是否继续？", "警告", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)

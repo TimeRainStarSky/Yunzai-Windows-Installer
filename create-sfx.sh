@@ -1,11 +1,12 @@
 #!/bin/bash
-# usage: ./create-sfx.sh pkgfile pkgname installer.exe
+# usage: ./create-sfx.sh pkgdir pkgname installer.exe
 set -e
 
 INPUT="$(realpath "$1")"
 PKGNAME="$2"
 OUTPUT="$(realpath "$3")"
 cd "$(dirname "$0")"
+DIR="$PWD"
 
 # Download and extract https://github.com/mcmilk/7-Zip-zstd
 URL="https://github.com/mcmilk/7-Zip-zstd/releases/download"
@@ -31,11 +32,13 @@ echo "$CHECKSUM $BASE.7z" | sha256sum --quiet --check
 7z x -o"$BASE" "$BASE.7z"
 
 # Create SFX installer
+cd "$INPUT"
+"$DIR/7z.exe" a "$DIR/$PKGNAME" -ms1T -m0=zstd -mx22 *
+cd "$DIR"
 TEMP="$OUTPUT.payload"
 rm -rf "$TEMP"
-mv -f "$INPUT" "$PKGNAME"
-"./7z.exe" a "$TEMP" -ms1T -m0=zstd -mx22 install.ps1 7z.{exe,dll} "$PKGNAME"
-mv -f "$PKGNAME" "$INPUT"
+"./7z.exe" a "$TEMP" -ms1T -m0=zstd -mx22 install.ps1 7z.{exe,dll}
+"./7z.exe" a "$TEMP" -mx0 "$PKGNAME"
 "./7z.exe" t "$TEMP"
 cat "$BASE/7zSD.sfx" - "$TEMP" > "$OUTPUT" << 'EOF'
 ;!@Install@!UTF-8!
@@ -43,4 +46,4 @@ ExecuteFile="powershell.exe"
 ExecuteParameters="-ExecutionPolicy Bypass .\install.ps1"
 ;!@InstallEnd@!
 EOF
-rm -rf 7z.{exe,dll} "$TEMP" "$BASE"
+rm -rf 7z.{exe,dll} "$TEMP" "$PKGNAME" "$BASE"

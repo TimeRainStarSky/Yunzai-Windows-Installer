@@ -7,20 +7,22 @@ on:
   schedule:
     - cron: '0 3 * * *'
 
-concurrency: nope
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
 jobs:
   build-installer:
-    runs-on: windows-${{ matrix.image }}
+    runs-on: windows-2025
     strategy:
       fail-fast: false
       matrix:
         include:
           - msystem: UCRT64
             arch_name: x86_64
-            image: 2022
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -33,41 +35,50 @@ jobs:
           msystem: ${{ matrix.msystem }}
           update: true
 
-      - name: Switch to the main mirror
-        shell: msys2 {0}
-        run: |
-          echo 'Server = https://repo.msys2.org/mingw/$repo/' > /etc/pacman.d/mirrorlist.mingw
-          echo 'Server = https://repo.msys2.org/msys/$arch/' > /etc/pacman.d/mirrorlist.msys
-          pacman-conf.exe
-
-      - name: Update using the main mirror & Check install
-        run: |
-          msys2 -c 'pacman --noconfirm -Suuy'
-          msys2 -c 'pacman --noconfirm -Suu'
-          msys2 -c 'pacman -Qkq'
-
       - name: Build Installer
         shell: msys2 {0}
         run: |
           bash make-msys2-installer
 
-      - name: Create 'latest' Variants and Checksums
+      - name: Set Release Env
+        id: set_env
+        shell: msys2 {0}
+        env:
+          REF: ${{ github.ref }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          mv msys2-base-${{ matrix.arch_name }}-[0-9]*.sfx.exe Yunzai-latest.sfx.exe
-          mv msys2-*.tar.zst Yunzai-latest.tar.zst
-          sha256sum.exe Yunzai-* > checksums.txt
-          cat checksums.txt
-          mv checksums.txt Yunzai-checksums.txt
+          if [[ "$REF" == 'refs/heads/main' ]]; then
+            echo 'RELEASE_TAG=nightly' >> "$GITHUB_OUTPUT"
+            echo 'FILE_NAME=latest' >> "$GITHUB_OUTPUT"
+          elif [[ "$REF_TYPE" == 'tag' ]] && [[ "$REF_NAME" != 'nightly' ]]; then
+            echo "RELEASE_TAG=$REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "FILE_NAME=$REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo 'FILE_NAME=nightly' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rename Artifacts and Checksums
+        if: steps.set_env.outputs.FILE_NAME != 'nightly'
+        env:
+          FILE_NAME: ${{ steps.set_env.outputs.FILE_NAME }}
+        run: |
+          mv Yunzai-*.sfx.exe "Yunzai-$env:FILE_NAME.sfx.exe"
+          mv Yunzai-*.tar.zst "Yunzai-$env:FILE_NAME.tar.zst"
+          sha256sum Yunzai-* | tee Yunzai-checksums.txt
 
       - name: Upload Results
         uses: actions/upload-artifact@v6
         with:
-          name: installer-${{ matrix.arch_name }}
+          name: Yunzai-${{ steps.set_env.outputs.FILE_NAME }}
           path: Yunzai-*
+          compression-level: 0
 
-      - name: Upload Nightly
-        if: github.ref == 'refs/heads/main'
+      - name: Upload to Release
+        if: steps.set_env.outputs.FILE_NAME != 'nightly' && github.event_name != 'pull_request'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.set_env.outputs.RELEASE_TAG }}
         run: |
-          gh release upload nightly Yunzai-* --clobber -R ${{ github.repository }}
+          gh release upload "$env:TAG_NAME" Yunzai-* --clobber || `
+          gh release create "$env:TAG_NAME" Yunzai-* --title "$env:TAG_NAME"
