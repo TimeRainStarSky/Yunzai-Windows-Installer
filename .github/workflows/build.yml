@@ -65,14 +65,13 @@ jobs:
         run: |
           mv Yunzai-*.sfx.exe "Yunzai-$env:FILE_NAME.sfx.exe"
           mv Yunzai-*.tar.zst "Yunzai-$env:FILE_NAME.tar.zst"
-          sha256sum Yunzai-* | tee Yunzai-checksums.txt
+          sha512sum.exe Yunzai-* | tee.exe Yunzai-sha512sum.txt
 
       - name: Upload Results
         uses: actions/upload-artifact@v6
         with:
           name: Yunzai-${{ steps.set_env.outputs.FILE_NAME }}
           path: Yunzai-*
-          compression-level: 0
 
       - name: Upload to Release
         if: steps.set_env.outputs.FILE_NAME != 'nightly' && github.event_name != 'pull_request'
