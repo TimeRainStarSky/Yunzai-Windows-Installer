@@ -52,6 +52,6 @@ PATH="$(</win/PATH)$PATH"
 EOF
 
 cat > etc/post-install/99.post << 'EOF'
-pacman -Syu --needed --noconfirm git fish mingw-w64-ucrt-x86_64-fastfetch
+pacman -Syu --needed --noconfirm fish mingw-w64-ucrt-x86_64-{git,fastfetch}
 rm -f /etc/post-install/99.post
 EOF

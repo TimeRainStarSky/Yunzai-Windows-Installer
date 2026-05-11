@@ -49,11 +49,7 @@ create_chroot_system() {
 }
 
 main() {
-  pacman -S --noconfirm --needed \
-    "git" \
-    "curl" \
-    "unzip" \
-    "${MINGW_PACKAGE_PREFIX}-7zip" \
+  pacman -S --noconfirm --needed curl unzip "${MINGW_PACKAGE_PREFIX}"-{git,7zip}
 
   create_chroot_system
   create_archives
