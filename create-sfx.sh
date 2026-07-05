@@ -10,12 +10,12 @@ DIR="$PWD"
 
 # Download and extract https://github.com/mcmilk/7-Zip-zstd
 URL="https://github.com/mcmilk/7-Zip-zstd/releases/download"
-CHECKSUM="5a55a8b6abb09d4b5ddd64c95f22a5270cb46752fb7a5353073508922b141596"
-NAME="7z25.01-zstd-x64"
+CHECKSUM="e6b3728f0ed2f6fd9f18c11d793ff67a8b1553555f1f8d9b916fe2e7f748ae27"
+NAME="7z26.02-zstd-x64"
 mkdir -p _cache
 BASE="_cache/$NAME"
 if [ ! -f "$BASE.exe" ]; then
-  curl --fail -L "$URL/v25.01-v1.5.7-R4/$NAME.exe" -o "$BASE.exe"
+  curl --fail -L "$URL/v26.02-v1.5.7-R1/$NAME.exe" -o "$BASE.exe"
 fi
 echo "$CHECKSUM $BASE.exe" | sha256sum --quiet --check
 7z e -o"$BASE" "_cache/$NAME.exe"
@@ -43,7 +43,7 @@ rm -rf "$TEMP"
 cat "$BASE/7zSD.sfx" - "$TEMP" > "$OUTPUT" << 'EOF'
 ;!@Install@!UTF-8!
 ExecuteFile="powershell.exe"
-ExecuteParameters="-ExecutionPolicy Bypass .\install.ps1"
+ExecuteParameters="-NoProfile -ExecutionPolicy Bypass -File .\install.ps1"
 ;!@InstallEnd@!
 EOF
 rm -rf 7z.{exe,dll} "$TEMP" "$PKGNAME" "$BASE"

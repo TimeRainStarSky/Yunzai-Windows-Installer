@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build-installer:
-    runs-on: windows-2025
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
