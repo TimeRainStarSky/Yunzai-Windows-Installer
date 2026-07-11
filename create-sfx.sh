@@ -10,12 +10,12 @@ DIR="$PWD"
 
 # Download and extract https://github.com/mcmilk/7-Zip-zstd
 URL="https://github.com/mcmilk/7-Zip-zstd/releases/download"
-CHECKSUM="e6b3728f0ed2f6fd9f18c11d793ff67a8b1553555f1f8d9b916fe2e7f748ae27"
+CHECKSUM="22dc4608d911d7c831437b969db66a42d0477cd3f5d93987cae9f59774857fc1"
 NAME="7z26.02-zstd-x64"
 mkdir -p _cache
 BASE="_cache/$NAME"
 if [ ! -f "$BASE.exe" ]; then
-  curl --fail -L "$URL/v26.02-v1.5.7-R1/$NAME.exe" -o "$BASE.exe"
+  curl --fail -L "$URL/v26.02-v1.5.7-R2/$NAME.exe" -o "$BASE.exe"
 fi
 echo "$CHECKSUM $BASE.exe" | sha256sum --quiet --check
 7z e -o"$BASE" "_cache/$NAME.exe"
