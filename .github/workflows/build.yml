@@ -1,11 +1,11 @@
-name: 'build'
+name: Build Installer
 
 on:
   push:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 0 * * 1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,7 +25,7 @@ jobs:
             arch_name: x86_64
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -43,23 +43,20 @@ jobs:
       - name: Set Release Env
         id: set_env
         shell: msys2 {0}
-        env:
-          REF: ${{ github.ref }}
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [[ "$REF" == 'refs/heads/main' ]]; then
-            echo 'RELEASE_TAG=nightly' >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == 'refs/heads/main' ]] || [[ "$GITHUB_REF" == 'refs/tags/weekly' ]]; then
+            echo 'RELEASE_TAG=weekly' >> "$GITHUB_OUTPUT"
             echo 'FILE_NAME=latest' >> "$GITHUB_OUTPUT"
-          elif [[ "$REF_TYPE" == 'tag' ]] && [[ "$REF_NAME" != 'nightly' ]]; then
-            echo "RELEASE_TAG=$REF_NAME" >> "$GITHUB_OUTPUT"
-            echo "FILE_NAME=$REF_NAME" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF_TYPE" == 'tag' ]]; then
+            echo "RELEASE_TAG=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
+            echo "FILE_NAME=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
           else
-            echo 'FILE_NAME=nightly' >> "$GITHUB_OUTPUT"
+            echo "RELEASE_TAG=" >> "$GITHUB_OUTPUT"
+            echo "FILE_NAME=${GITHUB_REF//\//-}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Rename Artifacts and Checksums
-        if: steps.set_env.outputs.FILE_NAME != 'nightly'
+        if: steps.set_env.outputs.RELEASE_TAG != ''
         env:
           FILE_NAME: ${{ steps.set_env.outputs.FILE_NAME }}
         run: |
@@ -68,13 +65,13 @@ jobs:
           sha512sum.exe Yunzai-* | tee.exe Yunzai-sha512sum.txt
 
       - name: Upload Results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Yunzai-${{ steps.set_env.outputs.FILE_NAME }}
           path: Yunzai-*
 
       - name: Upload to Release
-        if: steps.set_env.outputs.FILE_NAME != 'nightly' && github.event_name != 'pull_request'
+        if: steps.set_env.outputs.RELEASE_TAG != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ steps.set_env.outputs.RELEASE_TAG }}

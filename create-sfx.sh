@@ -33,11 +33,11 @@ echo "$CHECKSUM $BASE.7z" | sha256sum --quiet --check
 
 # Create SFX installer
 cd "$INPUT"
-"$DIR/7z.exe" a "$DIR/$PKGNAME" -ms1T -m0=zstd -mx22 *
+"$DIR/7z.exe" a "$DIR/$PKGNAME" -m0=zstd -mmax *
 cd "$DIR"
 TEMP="$OUTPUT.payload"
 rm -rf "$TEMP"
-"./7z.exe" a "$TEMP" -ms1T -m0=zstd -mx22 install.ps1 7z.{exe,dll}
+"./7z.exe" a "$TEMP" -m0=zstd -mmax install.ps1 7z.{exe,dll}
 "./7z.exe" a "$TEMP" -mx0 "$PKGNAME"
 "./7z.exe" t "$TEMP"
 cat "$BASE/7zSD.sfx" - "$TEMP" > "$OUTPUT" << 'EOF'
