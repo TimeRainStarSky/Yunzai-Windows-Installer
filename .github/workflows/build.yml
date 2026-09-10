@@ -61,7 +61,7 @@ jobs:
           FILE_NAME: ${{ steps.set_env.outputs.FILE_NAME }}
         run: |
           mv Yunzai-*.sfx.exe "Yunzai-$env:FILE_NAME.sfx.exe"
-          mv Yunzai-*.tar.zst "Yunzai-$env:FILE_NAME.tar.zst"
+          mv Yunzai-*.win-appimg.exe "Yunzai-$env:FILE_NAME.win-appimg.exe"
           sha512sum.exe Yunzai-* | tee.exe Yunzai-sha512sum.txt
 
       - name: Upload Results

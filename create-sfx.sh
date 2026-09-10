@@ -1,10 +1,9 @@
 #!/bin/bash
-# usage: ./create-sfx.sh pkgdir pkgname installer.exe
+# usage: ./create-sfx.sh pkgdir installer.exe
 set -e
 
 INPUT="$(realpath "$1")"
-PKGNAME="$2"
-OUTPUT="$(realpath "$3")"
+OUTPUT="$(realpath "$2")"
 cd "$(dirname "$0")"
 DIR="$PWD"
 
@@ -33,12 +32,13 @@ echo "$CHECKSUM $BASE.7z" | sha256sum --quiet --check
 
 # Create SFX installer
 cd "$INPUT"
-"$DIR/7z.exe" a "$DIR/$PKGNAME" -m0=zstd -mmax *
+PKGTEMP="_cache/pkg.7z"
+"$DIR/7z.exe" a "$DIR/$PKGTEMP" -m0=zstd -mmax *
 cd "$DIR"
 TEMP="$OUTPUT.payload"
 rm -rf "$TEMP"
 "./7z.exe" a "$TEMP" -m0=zstd -mmax install.ps1 7z.{exe,dll}
-"./7z.exe" a "$TEMP" -mx0 "$PKGNAME"
+"./7z.exe" a "$TEMP" -mx0 "$PKGTEMP"
 "./7z.exe" t "$TEMP"
 cat "$BASE/7zSD.sfx" - "$TEMP" > "$OUTPUT" << 'EOF'
 ;!@Install@!UTF-8!
@@ -46,4 +46,4 @@ ExecuteFile="powershell.exe"
 ExecuteParameters="-NoProfile -ExecutionPolicy Bypass -File .\install.ps1"
 ;!@InstallEnd@!
 EOF
-rm -rf 7z.{exe,dll} "$TEMP" "$PKGNAME" "$BASE"
+rm -rf "$TEMP" _cache

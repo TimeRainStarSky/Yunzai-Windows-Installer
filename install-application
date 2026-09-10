@@ -46,6 +46,7 @@ fastfetch
 cd app
 node .
 EOF
+unix2dos start.cmd
 
 cat > etc/profile.d/WinPATH.sh << 'EOF'
 PATH="$(</win/PATH)$PATH"
@@ -55,3 +56,64 @@ cat > etc/post-install/99.post << 'EOF'
 pacman -Syu --needed --noconfirm fish mingw-w64-ucrt-x86_64-{git,fastfetch}
 rm -f /etc/post-install/99.post
 EOF
+
+cat > ../start.cmd << EOF
+@echo off
+chcp 65001 >nul
+
+for /f "delims=" %%i in ('"%~dp0msys2_shell.cmd" -defterm -here -no-start -ucrt64 -c 'cmd //c echo ^^%%PATH^^%%'') do (set PATH=%%i)
+for /f "delims=" %%i in ('locale -uU') do (set LANG=%%i)
+
+set "APP_DIR=%CD%\\${_pkgname}"
+if exist "%APP_DIR%\" goto choose
+choice /m "请确认安装位置：%APP_DIR%"
+if errorlevel 2 (
+  echo 请将程序移动到安装位置后再启动。
+  pause
+  exit 0
+)
+
+echo 请选择 Git 仓库源
+
+echo A. GitHub（国外推荐）
+echo B. Gitee（国内推荐）
+echo C. GitCode
+choice /c abc /m "请输入你的选择"
+if %errorlevel%==1 set "REPO_URL=github.com"
+if %errorlevel%==2 set "REPO_URL=gitee.com"
+if %errorlevel%==3 set "REPO_URL=gitcode.com"
+
+git clone --depth 1 "https://%REPO_URL%/TimeRainStarSky/Yunzai" "%APP_DIR%"
+if errorlevel 1 (
+  echo [错误] git clone 失败
+  pause
+  exit 1
+)
+
+pushd "%APP_DIR%"
+call pnpm install
+if errorlevel 1 (
+  echo [错误] pnpm install 失败
+  pause
+  exit 1
+)
+popd
+
+:choose
+pushd "%APP_DIR%"
+if errorlevel 1 (
+  echo [错误] 无法进入 %APP_DIR%
+  pause
+  exit 1
+)
+
+choice /t 3 /c cs /d c /m "按C或3秒后启动程序，按S进入命令行"
+if errorlevel 2 (
+  "%~dp0msys2_shell.cmd" -defterm -here -no-start -ucrt64 -c fish
+) else (
+  fastfetch
+  node .
+)
+exit
+EOF
+unix2dos ../start.cmd

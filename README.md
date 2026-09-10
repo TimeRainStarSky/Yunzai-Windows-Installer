@@ -1,5 +1,5 @@
 # Yunzai Windows Installer
 
-## Nightly build
+## 发布页
 
-https://github.com/TimeRainStarSky/Yunzai-Windows-Installer/releases/tag/nightly
+https://github.com/TimeRainStarSky/Yunzai-Windows-Installer/releases

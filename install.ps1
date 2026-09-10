@@ -225,7 +225,7 @@ $InstallButton.Add_Click({
     $StatusLabel.Text = "正在安装程序..."
     $ProgressBar.Value = 40
     $ProgressForm.Refresh()
-    $Msys2Command = '""'
+    $Msys2Command = '"pacman -Scc --noconfirm"'
     & (Join-Path $DestinationPath "msys2_shell.cmd") -defterm -here -no-start -ucrt64 -c $Msys2Command | Write-Host
 
     $StatusLabel.Text = "正在安装项目..."

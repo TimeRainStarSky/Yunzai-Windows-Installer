@@ -9,29 +9,6 @@ _newmsysbase="${_build}/newmsys"
 _newmsys="${_newmsysbase}/msys64"
 _pkgname="msys2"
 
-create_archives() {
-  _tarfile="${_thisdir}/${_pkgname}-${_date}.tar"
-
-  echo "[Creating tarball...]"
-  pushd "${_newmsys}" > /dev/null
-    /usr/bin/tar --transform='s/:/_/g' --dereference --hard-dereference -cf "${_tarfile}" *
-  popd > /dev/null
-
-  echo "[Creating zstd archive...]"
-  zstd -T0 -22 --ultra --force "${_tarfile}" -o "${_tarfile}.zst"
-  zstd --test "${_tarfile}.zst"
-
-  rm "${_tarfile}"
-}
-
-create_sfx() {
-  echo "[Creating SFX...]"
-
-  pushd "${_newmsysbase}" > /dev/null
-    "${_thisdir}/create-sfx.sh" "${_newmsys}" "${_pkgname}.7z" "${_thisdir}/${_pkgname}-${_date}.sfx.exe"
-  popd > /dev/null
-}
-
 create_chroot_system() {
   echo "[Creating chroot system...]"
   rm -Rf "${_newmsysbase}" && mkdir -p "${_newmsys}"
@@ -48,12 +25,22 @@ create_chroot_system() {
   popd > /dev/null
 }
 
+create_sfx() {
+  echo "[Creating SFX...]"
+  "${_thisdir}/create-sfx.sh" "${_newmsys}" "${_thisdir}/${_pkgname}-${_date}.sfx.exe"
+}
+
+create_win_appimg() {
+  echo "[Creating WinAppImg...]"
+  "${_thisdir}/create-win-appimg.sh" "${_newmsys}" "${_thisdir}/${_pkgname}-${_date}.win-appimg.exe"
+}
+
 main() {
-  pacman -S --noconfirm --needed curl unzip "${MINGW_PACKAGE_PREFIX}"-{git,7zip}
+  pacman -S --noconfirm --needed curl unzip dos2unix "${MINGW_PACKAGE_PREFIX}"-{git,7zip}
 
   create_chroot_system
-  create_archives
   create_sfx
+  create_win_appimg
 }
 
 main
