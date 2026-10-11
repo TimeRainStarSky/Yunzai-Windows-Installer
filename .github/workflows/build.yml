@@ -15,7 +15,43 @@ permissions:
   contents: write
 
 jobs:
+  build-runner:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: runner
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy, rustfmt
+      - uses: actions-rust-lang/rustfmt@v1
+        with:
+          manifest-path: runner/Cargo.toml
+
+      - uses: giraffate/clippy-action@v1
+        with:
+          reporter: github-pr-review
+          filter_mode: nofilter
+          fail_on_error: true
+          clippy_flags: >-
+            -r --all-features
+            --all-targets
+            --
+            -D warnings
+
+      - run: cargo test -r --all-features
+      - run: cargo build -r --all-features
+
+      - name: Upload Runner
+        uses: actions/upload-artifact@v7
+        with:
+          name: runner
+          path: runner/target/release/runner.exe
+          if-no-files-found: error
+
   build-installer:
+    needs: build-runner
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -34,6 +70,12 @@ jobs:
         with:
           msystem: ${{ matrix.msystem }}
           update: true
+
+      - name: Download Runner
+        uses: actions/download-artifact@v8
+        with:
+          name: runner
+          path: runner/target/release
 
       - name: Build Installer
         shell: msys2 {0}
