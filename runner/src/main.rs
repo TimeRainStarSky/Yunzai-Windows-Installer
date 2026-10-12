@@ -2,7 +2,7 @@
 
 use std::{
   env, fs,
-  io::{Error, ErrorKind},
+  io::{Error, ErrorKind, Result},
   os::windows::process::CommandExt,
   path::{Path, PathBuf},
   process::Command,
@@ -12,7 +12,7 @@ use runner::{
   dialog_countdown::optionbox_countdown,
   {dialog, ok, okcancel, option, retry},
 };
-use windows_sys::Win32::System::Threading::CREATE_NEW_CONSOLE;
+use windows_sys::Win32::System::Threading::{CREATE_NEW_CONSOLE, CREATE_NO_WINDOW};
 
 const APP: &str = "Yunzai";
 const OWNER: &str = "TimeRainStarSky";
@@ -54,7 +54,7 @@ fn main() {
     ) {
       return;
     }
-    if !install(&exe_dir, &app_dir) {
+    if !install(&exe_dir, app_dir) {
       return;
     }
   }
@@ -74,10 +74,10 @@ fn main() {
     text,
   ) {
     Some(0) => {
-      run_msys2_shell(&exe_dir, "fastfetch; node .", Some(&app_dir));
+      start_msys2_shell(&exe_dir, "fastfetch; node .", app_dir);
     } // 启动程序
     Some(1) => {
-      run_msys2_shell(&exe_dir, "fish", Some(&app_dir));
+      start_msys2_shell(&exe_dir, "fish", app_dir);
     } // 进入命令行
     _ => {} // 取消/关闭 → 直接退出
   }
@@ -99,26 +99,36 @@ fn install(exe_dir: &Path, app_dir: &Path) -> bool {
       "git clone --depth 1 \"{}/{OWNER}/{APP}\" \"{APP}\" && cd \"{APP}\" && pnpm i && exit; CODE=$?; echo -n \"安装失败！按回车键退出...\"; read; exit $CODE",
       REPOS[idx],
     );
-    if run_msys2_shell(exe_dir, &script, None) && app_dir.exists() {
-      return true;
-    }
-    if app_dir.exists() {
-      let _ = fs::remove_dir_all(app_dir);
-    }
+    let err = match run_msys2_shell(exe_dir, &script) {
+      Ok(()) => {
+        if app_dir.exists() {
+          return true;
+        } else {
+          Error::new(
+            ErrorKind::NotFound,
+            format!("命令执行完成，但 {APP} 文件夹不存在"),
+          )
+        }
+      }
+      Err(err) => {
+        if app_dir.exists() {
+          let _ = fs::remove_dir_all(app_dir);
+        }
+        err
+      }
+    };
 
-    // 控制台里已保留报错；这里再问一次
-    if retry!("安装失败", "安装失败，是否重试？") {
-      continue; // 重试（也可取消后换仓库源）
+    if retry!("安装失败", "安装失败，是否重试？", &err.to_string()) {
+      continue;
     } else {
       return false;
     }
   }
 }
 
-/// 派生后立即放弃等待（detach），工作目录为 app 文件夹；失败弹窗提示
-fn run_msys2_shell(exe_dir: &Path, script: &str, cwd: Option<&Path>) -> bool {
-  let mut command = Command::new("cmd");
-  command
+/// 运行 MSYS2 Shell
+fn run_msys2_shell(exe_dir: &Path, script: &str) -> Result<()> {
+  Command::new("cmd")
     .args([
       "/c",
       &exe_dir.join("msys2_shell.cmd").to_string_lossy(),
@@ -129,22 +139,45 @@ fn run_msys2_shell(exe_dir: &Path, script: &str, cwd: Option<&Path>) -> bool {
       "-c",
       script,
     ])
-    .creation_flags(CREATE_NEW_CONSOLE);
+    .creation_flags(CREATE_NEW_CONSOLE)
+    .status()
+    .and_then(|s| {
+      if s.success() {
+        Ok(())
+      } else {
+        Err(Error::new(
+          ErrorKind::Interrupted,
+          format!("进程退出码 {}", s.code().unwrap_or(0)),
+        ))
+      }
+    })
+}
 
-  if let Some(cwd) = cwd {
-    command.current_dir(cwd);
-  }
-
-  if let Err(e) = command.status().and_then(|s| {
-    if s.success() {
-      Ok(())
-    } else {
-      Err(Error::new(
-        ErrorKind::Interrupted,
-        format!("进程退出码 {}", s.code().unwrap_or(0)),
-      ))
-    }
-  }) {
+/// 启动 MSYS2 Shell（不等待退出）
+fn start_msys2_shell(exe_dir: &Path, script: &str, cwd: &Path) -> bool {
+  if let Err(e) = Command::new("cmd")
+    .args([
+      "/c",
+      &exe_dir.join("msys2_shell.cmd").to_string_lossy(),
+      "-here",
+      "-ucrt64",
+      "-c",
+      script,
+    ])
+    .creation_flags(CREATE_NO_WINDOW)
+    .current_dir(cwd)
+    .status()
+    .and_then(|s| {
+      if s.success() {
+        Ok(())
+      } else {
+        Err(Error::new(
+          ErrorKind::Interrupted,
+          format!("进程退出码 {}", s.code().unwrap_or(0)),
+        ))
+      }
+    })
+  {
     ok!(
       dialog::Icon::Error,
       "执行失败",

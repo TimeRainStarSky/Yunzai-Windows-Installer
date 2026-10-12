@@ -63,6 +63,7 @@ extern "system" fn countdown_callback(
 /// 在 [`optionbox`] 基础上：正文每秒刷新一次，把 `countdown_text` 中的 `{}`
 /// 替换为剩余秒数；`countdown_secs` 秒后自动点击 `countdown_index` 对应的按钮。
 /// 返回值含义与 [`optionbox`] 相同。
+#[allow(clippy::too_many_arguments)]
 pub fn optionbox_countdown(
   icon: Icon,
   title: &str,
