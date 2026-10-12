@@ -2,6 +2,7 @@
 # usage: ./create-win-appimg.sh pkgdir win-appimg.exe
 set -e
 
+geturl(){ curl -fL --retry 3 --connect-timeout 5 "$@";}
 INPUT="$(realpath "$1")"
 OUTPUT="$(realpath "$2")"
 cd "$INPUT"
@@ -22,7 +23,7 @@ NAME="win-appimg-cli-windows-x64.exe"
 mkdir -p _cache
 BASE="_cache/$NAME"
 if [ ! -f "$BASE" ]; then
-  curl --fail -L "$URL/v0.0.3/$NAME" -o "$BASE"
+  geturl "$URL/v0.0.3/$NAME" -o "$BASE"
 fi
 echo "$CHECKSUM $BASE" | sha256sum --quiet --check
 "$BASE" "$INPUT" "$OUTPUT" -- run.exe

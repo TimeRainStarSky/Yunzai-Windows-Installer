@@ -2,6 +2,7 @@
 # usage: ./create-sfx.sh pkgdir installer.exe
 set -e
 
+geturl(){ curl -fL --retry 3 --connect-timeout 5 "$@";}
 INPUT="$(realpath "$1")"
 OUTPUT="$(realpath "$2")"
 cd "$(dirname "$0")"
@@ -14,7 +15,7 @@ NAME="7z26.02-zstd-x64"
 mkdir -p _cache
 BASE="_cache/$NAME"
 if [ ! -f "$BASE.exe" ]; then
-  curl --fail -L "$URL/v26.02-v1.5.7-R2/$NAME.exe" -o "$BASE.exe"
+  geturl "$URL/v26.02-v1.5.7-R2/$NAME.exe" -o "$BASE.exe"
 fi
 echo "$CHECKSUM $BASE.exe" | sha256sum --quiet --check
 7z e -o"$BASE" "_cache/$NAME.exe"
@@ -25,7 +26,7 @@ CHECKSUM="b3a748d6863d5f34a927d1a2bc562afc916780498cc8cbe559848b8bd1087e28"
 NAME="Sfx-Setup-x64"
 BASE="_cache/$NAME"
 if [ ! -f "$BASE.7z" ]; then
-  curl --fail -L "$URL/v25.01-v1.5.7-R3/$NAME.7z" -o "$BASE.7z"
+  geturl "$URL/v25.01-v1.5.7-R3/$NAME.7z" -o "$BASE.7z"
 fi
 echo "$CHECKSUM $BASE.7z" | sha256sum --quiet --check
 7z x -o"$BASE" "$BASE.7z"
