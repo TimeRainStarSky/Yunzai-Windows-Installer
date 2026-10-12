@@ -32,7 +32,7 @@ echo "$CHECKSUM $BASE.7z" | sha256sum --quiet --check
 
 # Create SFX installer
 cd "$INPUT"
-PKGTEMP="_cache/pkg.7z"
+PKGTEMP="pkg.7z"
 "$DIR/7z.exe" a "$DIR/$PKGTEMP" -m0=zstd -mmax *
 cd "$DIR"
 TEMP="$OUTPUT.payload"
@@ -46,4 +46,4 @@ ExecuteFile="powershell.exe"
 ExecuteParameters="-NoProfile -ExecutionPolicy Bypass -File .\install.ps1"
 ;!@InstallEnd@!
 EOF
-rm -rf "$TEMP" _cache
+rm -rf _cache "$TEMP" "$PKGTEMP"
