@@ -132,10 +132,10 @@ fn run_msys2_shell(exe_dir: &Path, script: &str) -> Result<()> {
     .args([
       "/c",
       &exe_dir.join("msys2_shell.cmd").to_string_lossy(),
-      "-defterm",
-      "-here",
-      "-no-start",
       "-ucrt64",
+      "-here",
+      "-defterm",
+      "-no-start",
       "-c",
       script,
     ])
@@ -159,8 +159,8 @@ fn start_msys2_shell(exe_dir: &Path, script: &str, cwd: &Path) -> bool {
     .args([
       "/c",
       &exe_dir.join("msys2_shell.cmd").to_string_lossy(),
-      "-here",
       "-ucrt64",
+      "-here",
       "-c",
       script,
     ])
