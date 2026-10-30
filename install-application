@@ -52,6 +52,10 @@ cat > etc/profile.d/WinPATH.sh << 'EOF'
 PATH="$(</win/PATH)$PATH"
 EOF
 
+cat > etc/post-install/00.post << 'EOF'
+update-ca-trust
+EOF
+
 cat > etc/post-install/99.post << 'EOF'
 for i in {1..3}; do
   pacman -Syu --needed --noconfirm fish mingw-w64-ucrt-x86_64-{git,fastfetch} && break

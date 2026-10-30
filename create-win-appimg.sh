@@ -7,12 +7,12 @@ INPUT="$(realpath "$1")"
 OUTPUT="$(realpath "$2")"
 cd "$INPUT"
 
-sed -i '/if \[ ! -d "${HOME}" \]; then/,/^fi$/c\
+sed -i 's/if \[ "$MAYBE_FIRST_START" = "true" \]; then/if true; then/;/MAYBE_FIRST_START/d' etc/profile
+cmd //c msys2_shell.cmd -defterm -here -no-start -ucrt64 -c "pacman -Scc --noconfirm && rm -rf /etc/post-install /home"
+sed -i '/if true; then/,/^fi$/d;/if \[ ! -d "${HOME}" \]; then/,/^fi$/c\
 if [ ! -d "${HOME}" ]; then\
   HOME="$(cygpath -u "$USERPROFILE")"\
 fi' etc/profile
-rm -rf etc/post-install/*mtab*
-cmd //c msys2_shell.cmd -defterm -here -no-start -ucrt64 -c "pacman -Scc --noconfirm"
 
 cd "$(dirname "$0")"
 # 神秘 Windows 执行 runner.exe 会弹出 Gameing Overlay
