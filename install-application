@@ -56,9 +56,9 @@ cat > etc/post-install/00.post << 'EOF'
 update-ca-trust
 EOF
 
-cat > etc/post-install/99.post << 'EOF'
+cat > etc/profile.d/999.sh << 'EOF'
 for i in {1..3}; do
   pacman -Syu --needed --noconfirm fish mingw-w64-ucrt-x86_64-{git,fastfetch} && break
 done || exit
-rm -f /etc/post-install/99.post
+rm -f /etc/profile.d/999.sh
 EOF
